@@ -6,19 +6,22 @@
   <title>캠퍼스 WiFi 대시보드</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: sans-serif;
       background: #f5f5f5;
       padding: 20px;
       margin: 0;
+      color: #222;
     }
 
-    h1 {
+    h1 { margin-bottom: 6px; }
+
+    .subtitle {
+      color: #666;
       margin-bottom: 20px;
+      font-size: 14px;
     }
 
     .stats-banner {
@@ -28,11 +31,11 @@
       margin-bottom: 24px;
     }
 
-    .stat-card {
+    .stat-card, .card, .panel {
       background: white;
       border-radius: 12px;
       padding: 18px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     .stat-label {
@@ -42,7 +45,7 @@
     }
 
     .stat-value {
-      font-size: 30px;
+      font-size: 28px;
       font-weight: bold;
       color: #1e2761;
     }
@@ -53,10 +56,6 @@
       margin-top: 4px;
     }
 
-    .alert-value {
-      color: #e74c3c;
-    }
-
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -65,31 +64,23 @@
     }
 
     .card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: 0.15s ease;
       border-top: 4px solid #ddd;
     }
 
     .card:hover {
       transform: translateY(-3px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
     }
 
-    .card.good-border {
-      border-top-color: #2ecc71;
-    }
+    .good-border { border-top-color: #2ecc71; }
+    .normal-border { border-top-color: #f39c12; }
+    .bad-border { border-top-color: #e74c3c; }
 
-    .card.normal-border {
-      border-top-color: #f39c12;
-    }
-
-    .card.bad-border {
-      border-top-color: #e74c3c;
-    }
+    .good { color: green; }
+    .normal { color: orange; }
+    .bad { color: red; }
 
     .score {
       font-size: 32px;
@@ -97,31 +88,19 @@
       margin: 10px 0;
     }
 
-    .good { color: green; }
-    .normal { color: orange; }
-    .bad { color: red; }
-
-    .bottom-layout {
+    .layout {
       display: grid;
       grid-template-columns: 2fr 1fr;
       gap: 16px;
-      margin-top: 12px;
-    }
-
-    .chart-box,
-    .alert-box {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      min-height: 420px;
+      margin-bottom: 16px;
     }
 
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
+      gap: 12px;
     }
 
     select {
@@ -131,36 +110,29 @@
       font-size: 14px;
     }
 
-    .alert-item {
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      border-left: 4px solid #e74c3c;
-      background: #fff5f5;
-    }
-
-    .alert-item.medium {
-      border-left-color: #f39c12;
-      background: #fffaf0;
-    }
-
-    .alert-building {
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
-
-    .alert-message {
+    table {
+      width: 100%;
+      border-collapse: collapse;
       font-size: 14px;
-      color: #444;
-      margin-bottom: 4px;
     }
 
-    .alert-time {
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+
+    th {
+      color: #555;
+      background: #fafafa;
+    }
+
+    .small-text {
       font-size: 12px;
-      color: #888;
+      color: #777;
     }
 
-    .no-alert {
+    .no-data {
       color: #888;
       text-align: center;
       padding: 30px 0;
@@ -174,24 +146,19 @@
     }
 
     @media (max-width: 1100px) {
-      .stats-banner {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .bottom-layout {
-        grid-template-columns: 1fr;
-      }
+      .stats-banner { grid-template-columns: repeat(2, 1fr); }
+      .layout { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 600px) {
-      .stats-banner {
-        grid-template-columns: 1fr;
-      }
+      .stats-banner { grid-template-columns: 1fr; }
     }
   </style>
 </head>
+
 <body>
   <h1>캠퍼스 WiFi 모니터링 대시보드</h1>
+  <div class="subtitle">공학관 · 학생회관 · 도서관 WiFi 품질 데이터를 실시간으로 확인합니다.</div>
 
   <div class="stats-banner">
     <div class="stat-card">
@@ -210,60 +177,80 @@
       <div class="stat-unit">점</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">미확인 알림</div>
-      <div class="stat-value alert-value" id="alertCount">--</div>
-      <div class="stat-unit">건</div>
+      <div class="stat-label">최근 측정 시각</div>
+      <div class="stat-value" id="latestTime" style="font-size:18px;">--</div>
+      <div class="stat-unit">KST 기준</div>
     </div>
   </div>
 
   <div class="grid" id="grid"></div>
 
-  <div class="bottom-layout">
-    <div class="chart-box">
+  <div class="layout">
+    <div class="panel">
       <div class="section-header">
-        <h2 style="margin:0;">📈 시간대별 WiFi 품질</h2>
+        <h2 style="margin:0;">시간대별 WiFi 품질</h2>
         <select id="buildingSelect">
           <option value="공학관">공학관</option>
-          <option value="도서관">도서관</option>
-          <option value="본관">본관</option>
           <option value="학생회관">학생회관</option>
+          <option value="도서관">도서관</option>
         </select>
       </div>
-
       <canvas id="hourlyChart" height="120"></canvas>
       <div id="errorBox"></div>
     </div>
 
-    <div class="alert-box">
+    <div class="panel">
       <div class="section-header">
-        <h2 style="margin:0;">⚠️ 이상 탐지 알림</h2>
+        <h2 style="margin:0;">층별 품질</h2>
       </div>
-      <div id="alertList">
-        <div class="no-alert">로딩 중...</div>
-      </div>
+      <div id="floorList" class="no-data">로딩 중...</div>
     </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-header">
+      <h2 style="margin:0;">최근 측정 목록</h2>
+      <span class="small-text">최신 데이터 10개</span>
+    </div>
+    <div id="recentList" class="no-data">로딩 중...</div>
   </div>
 
   <script>
     const API_BASE = "https://wifi-capstone-server.onrender.com";
+    const DISPLAY_HOURS = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0];
+
     let chartInstance = null;
 
     function setError(msg) {
       document.getElementById("errorBox").textContent = msg || "";
     }
 
+    function getStatusClass(status) {
+      if (status === "좋음") return "good";
+      if (status === "나쁨") return "bad";
+      return "normal";
+    }
+
+    function getBorderClass(status) {
+      if (status === "좋음") return "good-border";
+      if (status === "나쁨") return "bad-border";
+      return "normal-border";
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return await res.json();
+    }
+
     async function loadBuildings() {
       try {
-        setError("");
-        const res = await fetch(`${API_BASE}/dashboard/buildings`);
-        const data = await res.json();
-
+        const data = await fetchJson(`${API_BASE}/dashboard/buildings`);
         const grid = document.getElementById("grid");
         grid.innerHTML = "";
-      
 
         if (!Array.isArray(data) || data.length === 0) {
-          grid.innerHTML = "<p>표시할 데이터가 없습니다.</p>";
+          grid.innerHTML = "<p>표시할 건물 데이터가 없습니다.</p>";
           document.getElementById("totalCount").textContent = "0";
           document.getElementById("activeBuildings").textContent = "0";
           document.getElementById("avgScore").textContent = "0";
@@ -271,41 +258,38 @@
         }
 
         const totalCount = data.reduce((sum, item) => sum + Number(item.measurement_count || 0), 0);
-        const activeBuildings = data.length;
         const avgScore = Math.round(
           data.reduce((sum, item) => sum + Number(item.avg_score || 0), 0) / data.length
         );
 
         document.getElementById("totalCount").textContent = totalCount;
-        document.getElementById("activeBuildings").textContent = activeBuildings;
+        document.getElementById("activeBuildings").textContent = data.length;
         document.getElementById("avgScore").textContent = avgScore;
 
+        const latest = data
+          .map(item => item.latest_measured_at)
+          .filter(Boolean)
+          .sort()
+          .at(-1);
+
+        document.getElementById("latestTime").textContent = latest || "--";
+
         data.forEach(item => {
-          let colorClass = "normal";
-          let borderClass = "normal-border";
-
-          if (item.status === "좋음") {
-            colorClass = "good";
-            borderClass = "good-border";
-          }
-          if (item.status === "나쁨") {
-            colorClass = "bad";
-            borderClass = "bad-border";
-          }
-
           const card = document.createElement("div");
-          card.className = `card ${borderClass}`;
+          card.className = `card ${getBorderClass(item.status)}`;
 
           card.innerHTML = `
             <h3>${item.building}</h3>
-            <div class="score ${colorClass}">${item.avg_score}점</div>
+            <div class="score ${getStatusClass(item.status)}">${item.avg_score}점</div>
             <p>상태: ${item.status}</p>
-            <p>측정 수: ${item.measurement_count}</p>
+            <p>측정 수: ${item.measurement_count}건</p>
+            <p class="small-text">최근 측정: ${item.latest_measured_at || "-"}</p>
           `;
 
           card.addEventListener("click", () => {
             document.getElementById("buildingSelect").value = item.building;
             loadHourlyChart(item.building);
+            loadFloors(item.building);
           });
 
           grid.appendChild(card);
@@ -318,107 +302,140 @@
     async function loadHourlyChart(building) {
       try {
         setError("");
-        const res = await fetch(`${API_BASE}/dashboard/hourly?building=${encodeURIComponent(building)}`);
-        const data = await res.json();
+        const data = await fetchJson(`${API_BASE}/dashboard/hourly?building=${encodeURIComponent(building)}`);
 
-        const hours = Array.from({ length: 24 }, (_, i) => i);
-        const scores = hours.map(h => {
+        const scores = DISPLAY_HOURS.map(h => {
           const found = data.find(d => Number(d.hour) === h);
           return found ? Number(found.avg_score) : 0;
         });
 
-        const colors = scores.map(score => {
-          if (score >= 80) return "rgba(46, 204, 113, 0.8)";
-          if (score >= 50) return "rgba(243, 156, 18, 0.8)";
-          return "rgba(231, 76, 60, 0.8)";
-        });
-
         const ctx = document.getElementById("hourlyChart").getContext("2d");
 
-        if (chartInstance) {
-          chartInstance.destroy();
-        }
+        if (chartInstance) chartInstance.destroy();
 
         chartInstance = new Chart(ctx, {
           type: "bar",
           data: {
-            labels: hours.map(h => `${h}시`),
+            labels: DISPLAY_HOURS.map(h => `${h}시`),
             datasets: [{
               label: `${building} 시간대별 평균 품질`,
               data: scores,
-              backgroundColor: colors,
               borderRadius: 4
             }]
           },
           options: {
             responsive: true,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
+            plugins: { legend: { display: false } },
             scales: {
               y: {
                 min: 0,
                 max: 100,
-                title: {
-                  display: true,
-                  text: "품질 점수"
-                }
+                title: { display: true, text: "품질 점수" }
               }
             }
           }
         });
       } catch (e) {
-        console.error("시간대별 차트 로드 실패:", e);
         setError("시간대별 차트 로드 실패: " + e.message);
       }
     }
 
-    async function loadAlerts() {
+    async function loadFloors(building) {
       try {
-        const res = await fetch(`${API_BASE}/dashboard/alerts`);
-        const data = await res.json();
-
-        const alertList = document.getElementById("alertList");
-        document.getElementById("alertCount").textContent = Array.isArray(data) ? data.length : 0;
+        const data = await fetchJson(`${API_BASE}/dashboard/floors?building=${encodeURIComponent(building)}`);
+        const floorList = document.getElementById("floorList");
 
         if (!Array.isArray(data) || data.length === 0) {
-          alertList.innerHTML = '<div class="no-alert">현재 알림 없음 ✅</div>';
+          floorList.innerHTML = `<div class="no-data">${building} 층별 데이터가 없습니다.</div>`;
           return;
         }
 
-        alertList.innerHTML = data.map(alert => `
-          <div class="alert-item ${alert.severity === 'high' ? '' : 'medium'}">
-            <div class="alert-building">
-              ${alert.severity === 'high' ? '🔴' : '🟡'} ${alert.building || '전체'}
-            </div>
-            <div class="alert-message">${alert.message}</div>
-            <div class="alert-time">${new Date(alert.created_at).toLocaleString('ko-KR')}</div>
-          </div>
-        `).join("");
+        floorList.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>층</th>
+                <th>평균 점수</th>
+                <th>상태</th>
+                <th>측정 수</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(item => `
+                <tr>
+                  <td>${item.floor}층</td>
+                  <td class="${getStatusClass(item.status)}"><b>${item.avg_score}</b></td>
+                  <td>${item.status}</td>
+                  <td>${item.count}건</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
       } catch (e) {
-        document.getElementById("alertList").innerHTML =
-          '<div class="no-alert">알림 로드 실패</div>';
-        document.getElementById("alertCount").textContent = "0";
+        document.getElementById("floorList").innerHTML =
+          `<div class="no-data">층별 데이터 로드 실패</div>`;
+      }
+    }
+
+    async function loadRecent() {
+      try {
+        const data = await fetchJson(`${API_BASE}/dashboard/recent`);
+        const recentList = document.getElementById("recentList");
+
+        if (!Array.isArray(data) || data.length === 0) {
+          recentList.innerHTML = `<div class="no-data">최근 측정 데이터가 없습니다.</div>`;
+          return;
+        }
+
+        recentList.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>시간</th>
+                <th>건물</th>
+                <th>층</th>
+                <th>RSSI</th>
+                <th>지연시간</th>
+                <th>점수</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(item => `
+                <tr>
+                  <td>${item.created_at || "-"}</td>
+                  <td>${item.building}</td>
+                  <td>${item.floor ? item.floor + "층" : "-"}</td>
+                  <td>${item.rssi}</td>
+                  <td>${item.latency} ms</td>
+                  <td class="${getStatusClass(item.status)}"><b>${item.score}</b></td>
+                  <td>${item.status}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+      } catch (e) {
+        document.getElementById("recentList").innerHTML =
+          `<div class="no-data">최근 측정 데이터 로드 실패</div>`;
       }
     }
 
     async function loadAll() {
+      const selectedBuilding = document.getElementById("buildingSelect").value;
       await loadBuildings();
-      await loadHourlyChart(document.getElementById("buildingSelect").value);
-      await loadAlerts();
-    }
-
-    async function init() {
-      await loadAll();
+      await loadHourlyChart(selectedBuilding);
+      await loadFloors(selectedBuilding);
+      await loadRecent();
     }
 
     document.getElementById("buildingSelect").addEventListener("change", function () {
       loadHourlyChart(this.value);
+      loadFloors(this.value);
     });
 
-    window.onload = init;
+    window.onload = loadAll;
     setInterval(loadAll, 30000);
   </script>
 </body>
