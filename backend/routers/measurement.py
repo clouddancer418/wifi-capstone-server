@@ -1,33 +1,60 @@
-from score_calculator import calculate_score_from_dict
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from database import get_db
 from models import Measurement
 from schemas import MeasurementCreate, MeasurementResponse
-from score_calculator import calculate_score
+from score_calculator import calculate_score_from_dict
+
 
 router = APIRouter(prefix="/measurement")
+
+
+ALLOWED_LOCATIONS = {
+    "공학관": [2, 4, 5, 6],
+    "학생회관": [1],
+    "도서관": [4, 5],
+}
+
 
 @router.post("/", response_model=MeasurementResponse)
 def create_measurement(data: MeasurementCreate, db: Session = Depends(get_db)):
 
+    # 1. 허용된 건물인지 확인
+    if data.building not in ALLOWED_LOCATIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="허용되지 않은 건물입니다. 공학관, 학생회관, 도서관만 선택할 수 있습니다."
+        )
+
+    # 2. 해당 건물에서 허용된 층인지 확인
+    if data.floor not in ALLOWED_LOCATIONS[data.building]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{data.building}에서는 {ALLOWED_LOCATIONS[data.building]}층만 선택할 수 있습니다."
+        )
+
+    # 3. 점수 계산
     score_result = calculate_score_from_dict(data.dict())
 
+    # 4. DB 저장
     db_data = Measurement(
-    ssid=data.ssid,
-    bssid=data.bssid,
-    rssi=data.rssi,
-    latency=data.latency,
-    building=data.building,
-    download_speed=data.download_speed,
-    link_speed=data.link_speed,
-    score=score_result["score"],
-    status=score_result["status"],
+        ssid=data.ssid,
+        bssid=data.bssid,
+        rssi=data.rssi,
+        latency=data.latency,
+        building=data.building,
+        floor=data.floor,
+        location_name=data.location_name,
 
-    is_mock=False,
-    location_name=data.location_name,
-    floor=data.floor
-)
+        download_speed=data.download_speed,
+        link_speed=data.link_speed,
+
+        score=score_result["score"],
+        status=score_result["status"],
+
+        is_mock=False,
+    )
 
     db.add(db_data)
     db.commit()
