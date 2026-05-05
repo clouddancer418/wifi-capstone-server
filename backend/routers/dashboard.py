@@ -143,16 +143,13 @@ def get_floor_stats(building: str, db: Session = Depends(get_db)):
 
 @router.get("/recent")
 def get_recent_measurements(db: Session = Depends(get_db)):
-    kst_hour = kst_hour_expr()
-
     measurements = (
         db.query(Measurement)
         .filter(
             Measurement.is_mock == False,
             Measurement.building.in_(ALLOWED_BUILDINGS),
-            kst_hour.in_(ALLOWED_HOURS),
         )
-        .order_by(Measurement.created_at.desc())
+        .order_by(Measurement.id.desc())
         .limit(10)
         .all()
     )
