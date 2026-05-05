@@ -27,13 +27,16 @@ class MeasurementResponse(BaseModel):
 
     score: float
     status: str
-    created_at: datetime
+    created_at: datetime | None = None
 
     download_speed: float | None = None
     link_speed: int | None = None
 
     is_mock: bool
     location_name: str | None = None
+
+    class Config:
+        from_attributes = True
 
     class Config:
         from_attributes = True
