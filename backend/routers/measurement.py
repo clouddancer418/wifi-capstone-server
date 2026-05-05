@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from database import get_db
 from models import Measurement
@@ -20,31 +21,29 @@ ALLOWED_LOCATIONS = {
 @router.post("/", response_model=MeasurementResponse)
 def create_measurement(data: MeasurementCreate, db: Session = Depends(get_db)):
 
-    # 1. 허용된 건물인지 확인
     if data.building not in ALLOWED_LOCATIONS:
         raise HTTPException(
             status_code=400,
             detail="허용되지 않은 건물입니다. 공학관, 학생회관, 도서관만 선택할 수 있습니다."
         )
 
-    # 2. 해당 건물에서 허용된 층인지 확인
-    if data.floor not in ALLOWED_LOCATIONS[data.building]:
+    floor = int(data.floor)
+
+    if floor not in ALLOWED_LOCATIONS[data.building]:
         raise HTTPException(
             status_code=400,
             detail=f"{data.building}에서는 {ALLOWED_LOCATIONS[data.building]}층만 선택할 수 있습니다."
         )
 
-    # 3. 점수 계산
     score_result = calculate_score_from_dict(data.dict())
 
-    # 4. DB 저장
     db_data = Measurement(
         ssid=data.ssid,
         bssid=data.bssid,
         rssi=data.rssi,
         latency=data.latency,
         building=data.building,
-        floor=data.floor,
+        floor=floor,
         location_name=data.location_name,
 
         download_speed=data.download_speed,
@@ -54,6 +53,7 @@ def create_measurement(data: MeasurementCreate, db: Session = Depends(get_db)):
         status=score_result["status"],
 
         is_mock=False,
+        created_at=datetime.utcnow(),
     )
 
     db.add(db_data)
