@@ -1,23 +1,30 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, or_
+from datetime import timedelta
 
 from database import get_db
 from models import Measurement, Alert
-from datetime import timedelta
 
 
 router = APIRouter()
 
-ALLOWED_BUILDINGS = ["공학관", "학생회관", "도서관"]
+ALLOWED_BUILDINGS = [
+    "공학관",
+    "학생회관",
+    "도서관",
+    "실외/이동중",
+    "자동측정",
+]
 
-ALLOWED_FLOORS = {
-    "공학관": [2, 4, 5, 6],
-    "학생회관": [1],
-    "도서관": [4, 5],
-}
+DISPLAY_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0]
 
-ALLOWED_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0]
+
+def real_data_filter():
+    return or_(
+        Measurement.is_mock == False,
+        Measurement.is_mock.is_(None)
+    )
 
 
 def to_kst_string(dt):
@@ -30,10 +37,17 @@ def kst_hour_expr():
     return (extract("hour", Measurement.created_at) + 9) % 24
 
 
+def score_to_status(score):
+    if score >= 80:
+        return "좋음"
+    elif score >= 50:
+        return "보통"
+    else:
+        return "나쁨"
+
+
 @router.get("/buildings")
 def get_building_stats(db: Session = Depends(get_db)):
-    kst_hour = kst_hour_expr()
-
     results = (
         db.query(
             Measurement.building,
@@ -42,27 +56,25 @@ def get_building_stats(db: Session = Depends(get_db)):
             func.max(Measurement.created_at).label("latest_measured_at"),
         )
         .filter(
-            Measurement.is_mock == False,
+            real_data_filter(),
             Measurement.building.in_(ALLOWED_BUILDINGS),
-            kst_hour.in_(ALLOWED_HOURS),
         )
         .group_by(Measurement.building)
+        .order_by(func.count(Measurement.id).desc())
         .all()
     )
 
     response = []
 
     for r in results:
-        avg_score = round(r.avg_score, 1)
-        status = "좋음" if avg_score >= 80 else "보통" if avg_score >= 50 else "나쁨"
+        avg_score = round(float(r.avg_score or 0), 1)
 
         response.append({
             "building": r.building,
             "avg_score": avg_score,
-            "status": status,
+            "status": score_to_status(avg_score),
             "measurement_count": r.measurement_count,
             "latest_measured_at": to_kst_string(r.latest_measured_at),
-            "allowed_floors": ALLOWED_FLOORS.get(r.building, []),
         })
 
     return response
@@ -83,9 +95,8 @@ def get_hourly_stats(building: str, db: Session = Depends(get_db)):
             func.max(Measurement.created_at).label("latest_measured_at"),
         )
         .filter(
-            Measurement.is_mock == False,
+            real_data_filter(),
             Measurement.building == building,
-            kst_hour.in_(ALLOWED_HOURS),
         )
         .group_by(kst_hour)
         .order_by(kst_hour)
@@ -95,7 +106,7 @@ def get_hourly_stats(building: str, db: Session = Depends(get_db)):
     return [
         {
             "hour": int(r.hour),
-            "avg_score": round(r.avg_score, 1),
+            "avg_score": round(float(r.avg_score or 0), 1),
             "count": r.count,
             "latest_measured_at": to_kst_string(r.latest_measured_at),
         }
@@ -108,32 +119,30 @@ def get_floor_stats(building: str, db: Session = Depends(get_db)):
     if building not in ALLOWED_BUILDINGS:
         raise HTTPException(status_code=400, detail="허용되지 않은 건물입니다.")
 
-    kst_hour = kst_hour_expr()
+    floor_label = func.coalesce(Measurement.floor, "미입력")
 
     results = (
         db.query(
-            Measurement.floor,
+            floor_label.label("floor"),
             func.avg(Measurement.score).label("avg_score"),
             func.count(Measurement.id).label("count"),
             func.max(Measurement.created_at).label("latest_measured_at"),
         )
         .filter(
-            Measurement.is_mock == False,
+            real_data_filter(),
             Measurement.building == building,
-            Measurement.floor.in_(ALLOWED_FLOORS[building]),
-            kst_hour.in_(ALLOWED_HOURS),
         )
-        .group_by(Measurement.floor)
-        .order_by(Measurement.floor)
+        .group_by(floor_label)
+        .order_by(floor_label)
         .all()
     )
 
     return [
         {
             "building": building,
-            "floor": r.floor,
-            "avg_score": round(r.avg_score, 1),
-            "status": "좋음" if r.avg_score >= 80 else "보통" if r.avg_score >= 50 else "나쁨",
+            "floor": str(r.floor),
+            "avg_score": round(float(r.avg_score or 0), 1),
+            "status": score_to_status(float(r.avg_score or 0)),
             "count": r.count,
             "latest_measured_at": to_kst_string(r.latest_measured_at),
         }
@@ -146,11 +155,11 @@ def get_recent_measurements(db: Session = Depends(get_db)):
     measurements = (
         db.query(Measurement)
         .filter(
-            Measurement.is_mock == False,
+            real_data_filter(),
             Measurement.building.in_(ALLOWED_BUILDINGS),
         )
-        .order_by(Measurement.id.desc())
-        .limit(10)
+        .order_by(Measurement.created_at.desc())
+        .limit(100)
         .all()
     )
 
