@@ -159,7 +159,6 @@ def get_recent_measurements(db: Session = Depends(get_db)):
             Measurement.building.in_(ALLOWED_BUILDINGS),
         )
         .order_by(Measurement.created_at.desc())
-        .limit(100)
         .all()
     )
 

@@ -63,7 +63,7 @@ def create_measurement(data: MeasurementCreate, db: Session = Depends(get_db)):
     return db_data
 
 
-@router.get("", response_model=list[MeasurementResponse])
+@router.get("")
 def get_measurements(db: Session = Depends(get_db)):
     measurements = (
         db.query(Measurement)
